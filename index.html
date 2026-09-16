@@ -558,6 +558,9 @@ function update(dt){
       if(!p.passed && p.x + p.width < bird.x){
         p.passed = true;
         score++;
+        if(score % 50 === 0){
+          playMilestoneSound();
+        }
       }
     }
     pipes = pipes.filter(p => p.x + p.width > -20);
@@ -600,24 +603,25 @@ function drawScorePanel(){
   ctx.fillStyle = "#fff";
   ctx.strokeText(score, W/2, 52);
   ctx.fillText(score, W/2, 52);
+}
 
-  if(best>0){
-    ctx.save();
-    roundRect(W-92, 18, 78, 34, 10);
-    ctx.fillStyle = "rgba(30,15,5,0.45)";
-    ctx.fill();
-    ctx.strokeStyle = "rgba(255,255,255,0.3)";
-    ctx.lineWidth = 1;
-    ctx.stroke();
-    ctx.restore();
-    ctx.font = "9px monospace";
-    ctx.fillStyle = "#ffe9b0";
-    ctx.textAlign = "center";
-    ctx.fillText("BEST", W-53, 30);
-    ctx.font = "bold 16px Segoe UI, Verdana, sans-serif";
-    ctx.fillStyle = "#fff";
-    ctx.fillText(best, W-53, 46);
-  }
+function drawBestBadge(){
+  if(best<=0) return;
+  ctx.save();
+  roundRect(W-92, 18, 78, 34, 10);
+  ctx.fillStyle = "rgba(30,15,5,0.45)";
+  ctx.fill();
+  ctx.strokeStyle = "rgba(255,255,255,0.3)";
+  ctx.lineWidth = 1;
+  ctx.stroke();
+  ctx.restore();
+  ctx.font = "9px monospace";
+  ctx.fillStyle = "#ffe9b0";
+  ctx.textAlign = "center";
+  ctx.fillText("BEST", W-53, 30);
+  ctx.font = "bold 16px Segoe UI, Verdana, sans-serif";
+  ctx.fillStyle = "#fff";
+  ctx.fillText(best, W-53, 46);
 }
 
 function drawBunting(){
@@ -673,6 +677,7 @@ function draw(){
   if(state === "playing" || state === "over"){
     drawScorePanel();
   }
+  drawBestBadge();
 
   if(state === "start"){
     drawBunting();
@@ -700,13 +705,6 @@ function draw(){
     ctx.fillStyle="#ffe9b0";
     ctx.strokeText("(there's no limit to his larp)", W/2, H/2+145);
     ctx.fillText("(there's no limit to his larp)", W/2, H/2+145);
-
-    if(best>0){
-      ctx.font = "13px monospace";
-      ctx.fillStyle="#bfead0";
-      ctx.strokeText("Best: "+best, W/2, H/2-115);
-      ctx.fillText("Best: "+best, W/2, H/2-115);
-    }
   }
 
   if(state === "over"){
@@ -760,6 +758,28 @@ function playPopSound(){
     osc.connect(gain).connect(audioCtx.destination);
     osc.start(t);
     osc.stop(t+0.11);
+  }catch(e){}
+}
+
+function playMilestoneSound(){
+  try{
+    ensureAudio();
+    const t = audioCtx.currentTime;
+    // cheerful little ascending arpeggio to mark every 50 points
+    const notes = [523.25, 659.25, 783.99, 1046.5]; // C5 E5 G5 C6
+    notes.forEach((freq, i) => {
+      const start = t + i*0.08;
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(freq, start);
+      gain.gain.setValueAtTime(0.001, start);
+      gain.gain.exponentialRampToValueAtTime(0.25, start+0.015);
+      gain.gain.exponentialRampToValueAtTime(0.001, start+0.18);
+      osc.connect(gain).connect(audioCtx.destination);
+      osc.start(start);
+      osc.stop(start+0.2);
+    });
   }catch(e){}
 }
 
@@ -823,7 +843,11 @@ function flap(){
 canvas.addEventListener('mousedown', flap);
 canvas.addEventListener('touchstart', (e)=>{ e.preventDefault(); flap(); }, {passive:false});
 window.addEventListener('keydown', (e)=>{
-  if(e.code === 'Space'){ e.preventDefault(); flap(); }
+  if(e.code === 'Space'){
+    e.preventDefault();
+    if(e.repeat) return; // ignore OS key-repeat from holding the key down — tap only
+    flap();
+  }
 });
 
 // ---------- Main loop ----------
