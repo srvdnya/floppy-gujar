@@ -89,13 +89,15 @@ const GROUND_H = 84;
 const GRAVITY = 0.30;
 const FLAP_V = -6.1;
 const MAX_FALL = 7.4;
-const PIPE_SPEED = 2.1;
+const PIPE_SPEED = 2.2;
+const MAX_PIPE_SPEED = 3.9;
+function currentSpeed(){ return Math.min(MAX_PIPE_SPEED, PIPE_SPEED + score*0.05); }
 const PIPE_GAP = 178;
 const PIPE_INTERVAL = 92;
 
 // ---------- Bird: real head + tiny pixel-art body ----------
-const HEAD_H = 25, HEAD_W = HEAD_H * HEAD_RATIO;
-const BODY_H = 15, BODY_W = 19;
+const HEAD_H = 31, HEAD_W = HEAD_H * HEAD_RATIO;
+const BODY_H = 19, BODY_W = 24;
 const BIRD_TOTAL_H = HEAD_H + BODY_H - 4;
 
 const bird = {
@@ -535,7 +537,8 @@ function update(dt){
   cloudOffset += 0.5*dt;
   if(bird.flapPose > 0) bird.flapPose = Math.max(0, bird.flapPose - 0.05*dt);
 
-  for(const s of signs) s.x -= PIPE_SPEED*dt;
+  const spd = currentSpeed();
+  for(const s of signs) s.x -= spd*dt;
   signs = signs.filter(s => s.x > -100);
 
   if(state === "playing"){
@@ -543,7 +546,7 @@ function update(dt){
     if(bird.vy > MAX_FALL) bird.vy = MAX_FALL;
     bird.y += bird.vy*dt;
     bird.rotation = Math.max(-0.4, Math.min(1.0, bird.vy * 0.09));
-    groundOffset += PIPE_SPEED*dt;
+    groundOffset += spd*dt;
 
     spawnTimer += dt;
     if(spawnTimer >= PIPE_INTERVAL){
@@ -551,7 +554,7 @@ function update(dt){
       spawnPipe();
     }
     for(const p of pipes){
-      p.x -= PIPE_SPEED*dt;
+      p.x -= spd*dt;
       if(!p.passed && p.x + p.width < bird.x){
         p.passed = true;
         score++;
@@ -566,7 +569,7 @@ function update(dt){
     }
   } else if(state === "start"){
     bird.y = H/2 + Math.sin(clock*0.06)*10;
-    groundOffset += PIPE_SPEED*0.6*dt;
+    groundOffset += spd*0.6*dt;
   }
 }
 
